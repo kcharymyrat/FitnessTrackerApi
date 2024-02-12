@@ -1,0 +1,562 @@
+type: edu
+files:
+  - name: src/fitnesstracker/FitnessTrackerApplication.java
+    visible: true
+    text: |
+      package fitnesstracker;
+      
+      import org.springframework.boot.SpringApplication;
+      import org.springframework.boot.autoconfigure.SpringBootApplication;
+      
+      @SpringBootApplication
+      public class FitnessTrackerApplication {
+          public static void main(String[] args) {
+              SpringApplication.run(FitnessTrackerApplication.class, args);
+          }
+      }
+    learner_created: false
+  - name: src/resources/application.properties
+    visible: true
+    text: |
+      spring.datasource.url=jdbc:h2:file:../fitness_db
+      spring.datasource.driverClassName=org.h2.Driver
+      spring.datasource.username=sa
+      spring.datasource.password=sa
+      
+      spring.jpa.hibernate.ddl-auto=update
+      
+      spring.h2.console.enabled=true
+      spring.h2.console.settings.trace=false
+      spring.h2.console.settings.web-allow-others=false
+      
+      management.endpoints.web.exposure.include=*
+      management.endpoint.shutdown.enabled=true
+    learner_created: false
+  - name: build.gradle
+    visible: true
+    text: |
+      buildscript {
+          apply plugin: 'hyperskill'
+      
+          repositories {
+              mavenCentral()
+          }
+      
+          dependencies {
+              classpath "org.springframework.boot:spring-boot-gradle-plugin:$hs.spring.bootVersion"
+              classpath "io.spring.gradle:dependency-management-plugin:$hs.spring.dependencyManagementVersion"
+          }
+      }
+      
+      apply plugin: 'java'
+      apply plugin: 'org.springframework.boot'
+      apply plugin: 'io.spring.dependency-management'
+      
+      repositories {
+          mavenCentral()
+      }
+      
+      sourceSets.main.resources.srcDirs = ["src/resources"]
+      
+      dependencies {
+          implementation 'org.springframework.boot:spring-boot-starter'
+          implementation 'org.springframework.boot:spring-boot-starter-actuator'
+          implementation 'org.springframework.boot:spring-boot-starter-web'
+          implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+          implementation 'org.springframework.boot:spring-boot-starter-validation'
+          runtimeOnly 'com.h2database:h2'
+      }
+      
+      test {
+          jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+      }
+    learner_created: false
+  - name: test/DataRecord.java
+    visible: false
+    text: |
+      import java.security.SecureRandom;
+      import java.util.List;
+      
+      class DataRecord {
+          private String username;
+          private String activity;
+          private int duration;
+          private int calories;
+      
+          DataRecord(String username, String activity, int duration, int calories) {
+              this.username = username;
+              this.activity = activity;
+              this.duration = duration;
+              this.calories = calories;
+          }
+      
+          public String getUsername() {
+              return username;
+          }
+      
+          public void setUsername(String username) {
+              this.username = username;
+          }
+      
+          public String getActivity() {
+              return activity;
+          }
+      
+          public void setActivity(String activity) {
+              this.activity = activity;
+          }
+      
+          public int getDuration() {
+              return duration;
+          }
+      
+          public void setDuration(int duration) {
+              this.duration = duration;
+          }
+      
+          public int getCalories() {
+              return calories;
+          }
+      
+          public void setCalories(int calories) {
+              this.calories = calories;
+          }
+      }
+      
+      class DataRecordMother {
+          private static final SecureRandom rnd = new SecureRandom();
+          private static final List<String> activities = List.of(
+                  "running", "cycling", "dancing", "hiking", "swimming", "walking"
+          );
+      
+          static DataRecord createRecord() {
+              var username = "user-" + System.currentTimeMillis();
+              var activity = activities.get(rnd.nextInt(activities.size()));
+              var duration = rnd.nextInt(30, 3000);
+              var calories = rnd.nextInt(100, 700);
+              return new DataRecord(username, activity, duration, calories);
+          }
+      }
+    learner_created: false
+  - name: test/DevProfile.java
+    visible: false
+    text: |
+      class DevProfile {
+          private Object id;
+          private String email;
+          private String password;
+      
+          DevProfile(String email, String password) {
+              this.id = null;
+              this.email = email;
+              this.password = password;
+          }
+      
+          public Object getId() {
+              return id;
+          }
+      
+          public void setId(Object id) {
+              this.id = id;
+          }
+      
+          public String getEmail() {
+              return email;
+          }
+      
+          public DevProfile setEmail(String email) {
+              this.email = email;
+              return this;
+          }
+      
+          public String getPassword() {
+              return password;
+          }
+      
+          public DevProfile setPassword(String password) {
+              this.password = password;
+              return this;
+          }
+      }
+      
+      class DevProfileMother {
+          static DevProfile alice() {
+              return new DevProfile("alice@gmail.com", "qwerty");
+          }
+      
+          static DevProfile bob() {
+              return new DevProfile("bob@example.net", "12345");
+          }
+      
+          static DevProfile withBadEmail(String email) {
+              var password = String.valueOf(System.currentTimeMillis());
+              return new DevProfile(email, password);
+          }
+      
+          static DevProfile withBadPassword(String password) {
+              var email = "user-" + System.currentTimeMillis();
+              return new DevProfile(email, password);
+          }
+      }
+    learner_created: false
+  - name: test/FitnessTrackerTest.java
+    visible: false
+    text: |
+      import com.google.gson.Gson;
+      import org.hyperskill.hstest.dynamic.DynamicTest;
+      import org.hyperskill.hstest.dynamic.input.DynamicTesting;
+      import org.hyperskill.hstest.exception.outcomes.WrongAnswer;
+      import org.hyperskill.hstest.mocks.web.response.HttpResponse;
+      import org.hyperskill.hstest.stage.SpringTest;
+      import org.hyperskill.hstest.testcase.CheckResult;
+      
+      import java.util.regex.Pattern;
+      import java.util.stream.Stream;
+      
+      import static org.hyperskill.hstest.testing.expect.Expectation.expect;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.any;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isArray;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isObject;
+      
+      public class FitnessTrackerTest extends SpringTest {
+          private final Gson gson = new Gson();
+          private final String trackerUrl = "/api/tracker";
+          private final String signupUrl = "/api/developers/signup";
+      
+          private final DevProfile alice = DevProfileMother.alice();
+          private final DevProfile aliceCopy = DevProfileMother.alice();
+          private final DevProfile bob = DevProfileMother.bob();
+      
+          public FitnessTrackerTest() {
+              super("../fitness_db.mv.db");
+          }
+      
+          CheckResult testPostTracker(DataRecord[] data) {
+              for (var item : data) {
+                  HttpResponse response = post(trackerUrl, gson.toJson(item)).send();
+                  checkStatusCode(response, 201);
+              }
+              return CheckResult.correct();
+          }
+      
+          CheckResult testGetTracker(DataRecord[] data) {
+              HttpResponse response = get(trackerUrl).send();
+      
+              checkStatusCode(response, 200);
+              checkDataJson(response, data);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterValidDev(DevProfile devProfile) {
+              HttpResponse response = post(signupUrl, gson.toJson(devProfile)).send();
+      
+              checkStatusCode(response, 201);
+      
+              String location = response.getHeaders().get("Location");
+              if (location == null || !location.matches("/api/developers/.+")) {
+                  return CheckResult.wrong(
+                          "User registration response should contain the 'Location' header" +
+                                  " with the value '/api/developers/<id>'"
+                  );
+              }
+      
+              devProfile.setId(location.replaceAll(".+/", ""));
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterInvalidDev(DevProfile devProfile) {
+              HttpResponse response = post(signupUrl, gson.toJson(devProfile)).send();
+      
+              checkStatusCode(response, 400);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testGetProfile(DevProfile devProfile,
+                                     DevProfile anotherDevProfile) {
+              var profileUrl = "/api/developers/" + devProfile.getId();
+      
+              // no auth
+              HttpResponse response = get(profileUrl).send();
+              checkStatusCode(response, 401);
+      
+              // bad credentials
+              response = get(profileUrl)
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword() + "12345")
+                      .send();
+              checkStatusCode(response, 401);
+      
+              // wrong user
+              response = get(profileUrl)
+                      .basicAuth(anotherDevProfile.getEmail(), anotherDevProfile.getPassword())
+                      .send();
+              checkStatusCode(response, 403);
+      
+              // proper user
+              response = get(profileUrl)
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword())
+                      .send();
+              checkStatusCode(response, 200);
+              checkProfileJson(response, devProfile);
+      
+              return CheckResult.correct();
+          }
+      
+          private void checkStatusCode(HttpResponse response, int expected) {
+              var actual = response.getStatusCode();
+              var method = response.getRequest().getMethod();
+              var endpoint = response.getRequest().getEndpoint();
+              if (actual != expected) {
+                  throw new WrongAnswer("""
+                          %s %s should respond with status code %d, responded with %d
+                          \r
+                          """.formatted(method, endpoint, expected, actual));
+              }
+          }
+      
+          private void checkDataJson(HttpResponse response, DataRecord[] expectedData) {
+              expect(response.getContent()).asJson().check(
+                      isArray(expectedData.length)
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[3].getUsername())
+                                      .value("activity", expectedData[3].getActivity())
+                                      .value("duration", expectedData[3].getDuration())
+                                      .value("calories", expectedData[3].getCalories())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[2].getUsername())
+                                      .value("activity", expectedData[2].getActivity())
+                                      .value("duration", expectedData[2].getDuration())
+                                      .value("calories", expectedData[2].getCalories())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[1].getUsername())
+                                      .value("activity", expectedData[1].getActivity())
+                                      .value("duration", expectedData[1].getDuration())
+                                      .value("calories", expectedData[1].getCalories())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[0].getUsername())
+                                      .value("activity", expectedData[0].getActivity())
+                                      .value("duration", expectedData[0].getDuration())
+                                      .value("calories", expectedData[0].getCalories())
+                              )
+              );
+          }
+      
+          private void checkProfileJson(HttpResponse response, DevProfile expectedData) {
+              expect(response.getContent()).asJson().check(
+                      isObject()
+                              .value("id", any())
+                              .value("email", Pattern.compile(expectedData.getEmail(), Pattern.CASE_INSENSITIVE))
+              );
+          }
+      
+          CheckResult reloadServer() {
+              try {
+                  reloadSpring();
+              } catch (Exception ex) {
+                  throw new WrongAnswer("Failed to restart application: " + ex.getMessage());
+              }
+              return CheckResult.correct();
+          }
+      
+          DataRecord[] records = Stream
+                  .generate(DataRecordMother::createRecord)
+                  .limit(4)
+                  .toArray(DataRecord[]::new);
+      
+          @DynamicTest
+          DynamicTesting[] dt = new DynamicTesting[]{
+                  () -> testRegisterValidDev(alice),
+                  () -> testRegisterValidDev(bob),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail(null)),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail("")),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail("email")),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadPassword(null)),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadPassword("")),
+                  () -> testRegisterInvalidDev(aliceCopy),
+                  () -> testPostTracker(records),
+                  () -> testGetTracker(records),
+                  () -> testGetProfile(alice, bob),
+                  this::reloadServer,
+                  () -> testGetTracker(records),
+          };
+      }
+    learner_created: false
+  - name: src/fitnesstracker/controllers/FitnessTrackerController.java
+    visible: true
+    text: |
+      package fitnesstracker.controllers;
+      
+      import fitnesstracker.models.FitnessTrackerEntity;
+      import fitnesstracker.views.FitnessTrackerRepository;
+      import org.springframework.beans.factory.annotation.Autowired;
+      import org.springframework.data.domain.Sort;
+      import org.springframework.http.ResponseEntity;
+      import org.springframework.web.bind.annotation.GetMapping;
+      import org.springframework.web.bind.annotation.PostMapping;
+      import org.springframework.web.bind.annotation.RequestBody;
+      import org.springframework.web.bind.annotation.RestController;
+      
+      import java.net.URI;
+      import java.util.List;
+      
+      @RestController
+      public class FitnessTrackerController {
+      
+          private final FitnessTrackerRepository repository;
+      
+          @Autowired
+          public FitnessTrackerController(FitnessTrackerRepository repository) {
+              this.repository = repository;
+          }
+      
+          @PostMapping(path = "/api/tracker")
+          public ResponseEntity<Void> createFitnessTracker(@RequestBody FitnessTrackerEntity fitnessTracker) {
+              FitnessTrackerEntity savedFitnessTracker = repository.save(fitnessTracker);
+              URI location = URI.create(String.format("/api/tracker/%s", savedFitnessTracker.getId()));
+              return ResponseEntity.created(location).build();
+          }
+      
+          @GetMapping(path = "/api/tracker")
+          public ResponseEntity<Iterable<FitnessTrackerEntity>> getFitnessTrackerList() {
+              Sort sortByIdDesc = Sort.by("id").descending();
+              Iterable<FitnessTrackerEntity> fitnessTrackerEntityList = repository.findAll(sortByIdDesc);
+              return ResponseEntity.ok(fitnessTrackerEntityList);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/views/FitnessTrackerRepository.java
+    visible: true
+    text: |
+      package fitnesstracker.views;
+      
+      import fitnesstracker.models.FitnessTrackerEntity;
+      import org.springframework.data.repository.CrudRepository;
+      import org.springframework.data.repository.PagingAndSortingRepository;
+      
+      public interface FitnessTrackerRepository extends PagingAndSortingRepository<FitnessTrackerEntity, Long>,
+              CrudRepository<FitnessTrackerEntity, Long> {
+      }
+    learner_created: true
+  - name: src/fitnesstracker/views/FitnessTrackerSortedResponse.java
+    visible: true
+    text: |
+      package fitnesstracker.views;
+      
+      public class FitnessTrackerSortedResponse {
+      }
+    learner_created: true
+  - name: src/fitnesstracker/models/FitnessTrackerEntity.java
+    visible: true
+    text: |
+      package fitnesstracker.models;
+      
+      import jakarta.persistence.*;
+      
+      @Entity
+      @Table(name = "fitness_tracker")
+      public class FitnessTrackerEntity {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private long id;
+      
+          private String username;
+          private String activity;
+          private int duration;
+          private int calories;
+      
+          public FitnessTrackerEntity() {
+          }
+      
+          public FitnessTrackerEntity(long id, String username, String activity, int duration, int calories) {
+              this.id = id;
+              this.username = username;
+              this.activity = activity;
+              this.duration = duration;
+              this.calories = calories;
+          }
+      
+          public String getUsername() {
+              return username;
+          }
+      
+          public void setUsername(String username) {
+              this.username = username;
+          }
+      
+          public String getActivity() {
+              return activity;
+          }
+      
+          public void setActivity(String activity) {
+              this.activity = activity;
+          }
+      
+          public int getDuration() {
+              return duration;
+          }
+      
+          public void setDuration(int duration) {
+              this.duration = duration;
+          }
+      
+          public int getCalories() {
+              return calories;
+          }
+      
+          public void setCalories(int calories) {
+              this.calories = calories;
+          }
+      
+          public long getId() {
+              return id;
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developer/Developer.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/configs/SecurityConfig.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/configs/CustomErrorMessage.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperRepository.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperAdapter.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperSignupDTO.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperController.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperUserDetailsServiceImpl.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperInfoResponse.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/configs/FitnessTrackerApiException.java
+    visible: true
+    learner_created: true
+  - name: src/fitnesstracker/developer/DeveloperService.java
+    visible: true
+    learner_created: true
+feedback_link: https://hyperskill.org/projects/408/stages/2391/implement#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Fri, 09 Feb 2024 08:45:21 UTC"
+record: 2

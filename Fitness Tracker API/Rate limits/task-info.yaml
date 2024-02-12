@@ -1,0 +1,1639 @@
+type: edu
+files:
+  - name: src/fitnesstracker/FitnessTrackerApplication.java
+    visible: true
+    text: |
+      package fitnesstracker;
+      
+      import org.springframework.boot.SpringApplication;
+      import org.springframework.boot.autoconfigure.SpringBootApplication;
+      
+      @SpringBootApplication
+      public class FitnessTrackerApplication {
+          public static void main(String[] args) {
+              SpringApplication.run(FitnessTrackerApplication.class, args);
+          }
+      }
+    learner_created: false
+  - name: src/resources/application.properties
+    visible: true
+    text: |
+      spring.datasource.url=jdbc:h2:file:../fitness_db
+      spring.datasource.driverClassName=org.h2.Driver
+      spring.datasource.username=sa
+      spring.datasource.password=sa
+      
+      spring.jpa.hibernate.ddl-auto=update
+      
+      spring.h2.console.enabled=true
+      spring.h2.console.settings.trace=false
+      spring.h2.console.settings.web-allow-others=false
+      
+      management.endpoints.web.exposure.include=*
+      management.endpoint.shutdown.enabled=true
+    learner_created: false
+  - name: build.gradle
+    visible: true
+    text: |
+      buildscript {
+          apply plugin: 'hyperskill'
+      
+          repositories {
+              mavenCentral()
+          }
+      
+          dependencies {
+              classpath "org.springframework.boot:spring-boot-gradle-plugin:$hs.spring.bootVersion"
+              classpath "io.spring.gradle:dependency-management-plugin:$hs.spring.dependencyManagementVersion"
+          }
+      }
+      
+      apply plugin: 'java'
+      apply plugin: 'org.springframework.boot'
+      apply plugin: 'io.spring.dependency-management'
+      
+      repositories {
+          mavenCentral()
+      }
+      
+      sourceSets.main.resources.srcDirs = ["src/resources"]
+      
+      dependencies {
+          implementation 'org.springframework.boot:spring-boot-starter'
+          implementation 'org.springframework.boot:spring-boot-starter-actuator'
+          implementation 'org.springframework.boot:spring-boot-starter-web'
+          implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+          implementation 'org.springframework.boot:spring-boot-starter-validation'
+          runtimeOnly 'com.h2database:h2'
+      }
+      
+      test {
+          jvmArgs '--add-opens', 'java.base/java.lang=ALL-UNNAMED'
+      }
+    learner_created: false
+  - name: test/AppProfile.java
+    visible: false
+    text: |
+      class AppProfile {
+          private String name;
+          private String description;
+          private String apikey;
+          private String category;
+      
+          AppProfile(String name, String description) {
+              this.name = name;
+              this.description = description;
+              this.apikey = null;
+              this.category = "premium";
+          }
+      
+          public String getName() {
+              return name;
+          }
+      
+          public AppProfile setName(String name) {
+              this.name = name;
+              return this;
+          }
+      
+          public String getDescription() {
+              return description;
+          }
+      
+          public void setDescription(String description) {
+              this.description = description;
+          }
+      
+          public String getApikey() {
+              return apikey;
+          }
+      
+          public void setApikey(String apikey) {
+              this.apikey = apikey;
+          }
+      
+          public String getCategory() {
+              return category;
+          }
+      
+          public void setCategory(String category) {
+              this.category = category;
+          }
+      }
+      
+      class AppProfileMother {
+          public static AppProfile demo1() {
+              return new AppProfile("Demo App 1", "In sit amet posuere magna. Cras cursus tincidunt.");
+          }
+      
+          public static AppProfile demo2() {
+              return new AppProfile("Demo App 2", "");
+          }
+      
+          public static AppProfile withBadName(String name) {
+              return new AppProfile(name, "In sit amet posuere magna. Cras cursus tincidunt.");
+          }
+      
+          public static AppProfile withBadDescription(String description) {
+              var name = "app-" + System.currentTimeMillis();
+              return new AppProfile(name, description);
+          }
+      
+          public static AppProfile withBadApiKey(String apiKey) {
+              var name = "app-" + System.currentTimeMillis();
+              var app = new AppProfile(name, "app description");
+              app.setApikey(apiKey);
+              return app;
+          }
+      
+          public static AppProfile basicApp() {
+              var name = "app-" + System.currentTimeMillis();
+              var app = new AppProfile(name, "app description");
+              app.setCategory("basic");
+              return app;
+          }
+      }
+    learner_created: false
+  - name: test/DataRecord.java
+    visible: false
+    text: |
+      import java.security.SecureRandom;
+      import java.util.List;
+      
+      class DataRecord {
+          private String username;
+          private String activity;
+          private int duration;
+          private int calories;
+          private String application;
+      
+          DataRecord(String username, String activity, int duration, int calories) {
+              this.username = username;
+              this.activity = activity;
+              this.duration = duration;
+              this.calories = calories;
+              this.application = null;
+          }
+      
+          public String getUsername() {
+              return username;
+          }
+      
+          public void setUsername(String username) {
+              this.username = username;
+          }
+      
+          public String getActivity() {
+              return activity;
+          }
+      
+          public void setActivity(String activity) {
+              this.activity = activity;
+          }
+      
+          public int getDuration() {
+              return duration;
+          }
+      
+          public void setDuration(int duration) {
+              this.duration = duration;
+          }
+      
+          public int getCalories() {
+              return calories;
+          }
+      
+          public void setCalories(int calories) {
+              this.calories = calories;
+          }
+      
+          public String getApplication() {
+              return application;
+          }
+      
+          public void setApplication(String application) {
+              this.application = application;
+          }
+      }
+      
+      class DataRecordMother {
+          private static final SecureRandom rnd = new SecureRandom();
+          private static final List<String> activities = List.of(
+                  "running", "cycling", "dancing", "hiking", "swimming", "walking"
+          );
+      
+          static DataRecord createRecord() {
+              var username = "user-" + System.currentTimeMillis();
+              var activity = activities.get(rnd.nextInt(activities.size()));
+              var duration = rnd.nextInt(30, 3000);
+              var calories = rnd.nextInt(100, 700);
+              return new DataRecord(username, activity, duration, calories);
+          }
+      }
+    learner_created: false
+  - name: test/DevProfile.java
+    visible: false
+    text: |
+      import java.util.List;
+      
+      class DevProfile {
+          private Object id;
+          private String email;
+          private String password;
+          private List<AppProfile> applications;
+      
+          DevProfile(String email, String password) {
+              this.id = null;
+              this.email = email;
+              this.password = password;
+              this.applications = null;
+          }
+      
+          public Object getId() {
+              return id;
+          }
+      
+          public void setId(Object id) {
+              this.id = id;
+          }
+      
+          public String getEmail() {
+              return email;
+          }
+      
+          public DevProfile setEmail(String email) {
+              this.email = email;
+              return this;
+          }
+      
+          public String getPassword() {
+              return password;
+          }
+      
+          public DevProfile setPassword(String password) {
+              this.password = password;
+              return this;
+          }
+      
+          public List<AppProfile> getApplications() {
+              return applications;
+          }
+      
+          public void setApplications(List<AppProfile> applications) {
+              this.applications = applications;
+          }
+      }
+      
+      class DevProfileMother {
+          static DevProfile alice() {
+              return new DevProfile("alice@gmail.com", "qwerty");
+          }
+      
+          static DevProfile bob() {
+              return new DevProfile("bob@example.net", "12345");
+          }
+      
+          static DevProfile withBadEmail(String email) {
+              var password = String.valueOf(System.currentTimeMillis());
+              return new DevProfile(email, password);
+          }
+      
+          static DevProfile withBadPassword(String password) {
+              var email = "user-" + System.currentTimeMillis();
+              return new DevProfile(email, password);
+          }
+      }
+    learner_created: false
+  - name: test/FitnessTrackerTest.java
+    visible: false
+    text: |
+      import com.google.gson.Gson;
+      import org.hyperskill.hstest.dynamic.DynamicTest;
+      import org.hyperskill.hstest.dynamic.input.DynamicTesting;
+      import org.hyperskill.hstest.exception.outcomes.WrongAnswer;
+      import org.hyperskill.hstest.mocks.web.request.HttpRequest;
+      import org.hyperskill.hstest.mocks.web.response.HttpResponse;
+      import org.hyperskill.hstest.stage.SpringTest;
+      import org.hyperskill.hstest.testcase.CheckResult;
+      
+      import java.util.ArrayList;
+      import java.util.Random;
+      import java.util.UUID;
+      import java.util.concurrent.ThreadLocalRandom;
+      import java.util.regex.Pattern;
+      import java.util.stream.Stream;
+      
+      import static org.hyperskill.hstest.testing.expect.Expectation.expect;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.any;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isArray;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isObject;
+      import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isString;
+      
+      public class FitnessTrackerTest extends SpringTest {
+          private final Random rnd = ThreadLocalRandom.current();
+          private final Gson gson = new Gson();
+          private final String trackerUrl = "/api/tracker";
+          private final String signupUrl = "/api/developers/signup";
+          private final String registerUrl = "/api/applications/register";
+          private final DataRecord[] records = Stream.generate(DataRecordMother::createRecord).limit(4).toArray(DataRecord[]::new);
+          private final DevProfile alice = DevProfileMother.alice();
+          private final DevProfile aliceCopy = DevProfileMother.alice();
+          private final DevProfile bob = DevProfileMother.bob();
+          private final AppProfile demo1 = AppProfileMother.demo1();
+          private final AppProfile demo1Copy = AppProfileMother.demo1();
+          private final AppProfile demo2 = AppProfileMother.demo2();
+          private final AppProfile basicApp = AppProfileMother.basicApp();
+      
+          public FitnessTrackerTest() {
+              super("../fitness_db.mv.db");
+          }
+      
+          CheckResult testPostTracker(DataRecord[] data, AppProfile appProfile) {
+              for (DataRecord item : data) {
+                  HttpResponse response = post(trackerUrl, gson.toJson(item))
+                          .addHeader("X-API-Key", appProfile.getApikey())
+                          .send();
+                  checkStatusCode(response, 201);
+      
+                  item.setApplication(appProfile.getName());
+              }
+              return CheckResult.correct();
+          }
+      
+          CheckResult testPostTrackerUnauthenticated(DataRecord data, AppProfile appProfile) {
+              HttpRequest request = post(trackerUrl, gson.toJson(data));
+              if (appProfile.getApikey() != null) {
+                  request = request.addHeader("X-API-Key", appProfile.getApikey());
+              }
+              HttpResponse response = request.send();
+              checkStatusCode(response, 401);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testGetTracker(DataRecord[] data, AppProfile appProfile) {
+              HttpResponse response = get(trackerUrl)
+                      .addHeader("X-API-Key", appProfile.getApikey())
+                      .send();
+      
+              checkStatusCode(response, 200);
+              checkDataJson(response, data);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testGetTrackerUnauthenticated(AppProfile appProfile) {
+              HttpRequest request = get(trackerUrl);
+              if (appProfile.getApikey() != null) {
+                  request = request.addHeader("X-API-Key", appProfile.getApikey());
+              }
+              HttpResponse response = request.send();
+              checkStatusCode(response, 401);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterValidDev(DevProfile devProfile) {
+              HttpResponse response = post(signupUrl, gson.toJson(devProfile)).send();
+      
+              checkStatusCode(response, 201);
+      
+              String location = response.getHeaders().get("Location");
+              if (location == null || !location.matches("/api/developers/.+")) {
+                  return CheckResult.wrong(
+                          "User registration response should contain the 'Location' header" +
+                                  " with the value '/api/developers/<id>'"
+                  );
+              }
+      
+              devProfile.setId(location.replaceAll(".+/", ""));
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterInvalidDev(DevProfile devProfile) {
+              HttpResponse response = post(signupUrl, gson.toJson(devProfile)).send();
+      
+              checkStatusCode(response, 400);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterApp(DevProfile devProfile, AppProfile appProfile) {
+              HttpResponse response = post(registerUrl, gson.toJson(appProfile))
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword())
+                      .send();
+      
+              checkStatusCode(response, 201);
+              checkAppRegistrationResponseJson(response, appProfile);
+      
+              var apikey = response.getJson().getAsJsonObject().get("apikey").getAsString();
+              appProfile.setApikey(apikey);
+              if (devProfile.getApplications() == null) {
+                  devProfile.setApplications(new ArrayList<>());
+              }
+              devProfile.getApplications().add(appProfile);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRegisterInvalidApp(DevProfile devProfile,
+                                             AppProfile appProfile) {
+              HttpResponse response = post(registerUrl, gson.toJson(appProfile))
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword())
+                      .send();
+      
+              checkStatusCode(response, 400);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testGetProfile(DevProfile devProfile,
+                                     DevProfile anotherDevProfile) {
+              var profileUrl = "/api/developers/" + devProfile.getId();
+      
+              // no auth
+              HttpResponse response = get(profileUrl).send();
+              checkStatusCode(response, 401);
+      
+              // bad credentials
+              response = get(profileUrl)
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword() + "12345")
+                      .send();
+              checkStatusCode(response, 401);
+      
+              // wrong user
+              response = get(profileUrl)
+                      .basicAuth(anotherDevProfile.getEmail(), anotherDevProfile.getPassword())
+                      .send();
+              checkStatusCode(response, 403);
+      
+              // proper user
+              response = get(profileUrl)
+                      .basicAuth(devProfile.getEmail(), devProfile.getPassword())
+                      .send();
+              checkStatusCode(response, 200);
+              checkProfileJson(response, devProfile);
+      
+              return CheckResult.correct();
+          }
+      
+          CheckResult testRateLimit(DataRecord data, AppProfile appProfile) {
+              HttpRequest getRequest = get(trackerUrl)
+                      .addHeader("X-API-Key", appProfile.getApikey());
+              HttpRequest postRequest = post(trackerUrl, gson.toJson(data))
+                      .addHeader("X-API-Key", appProfile.getApikey());
+      
+              int rejectedRequests = countRejectedRequests(postRequest, getRequest);
+              if (rejectedRequests != 3) {
+                  return CheckResult.wrong(
+                          "Too few rejected requests for a basic application within 1 second.\n" +
+                                  "Expected 3 responses with the status code 429 but received only %d such responses"
+                                          .formatted(rejectedRequests)
+                  );
+              }
+      
+              try {
+                  Thread.sleep(1500);
+              } catch (InterruptedException e) {
+                  System.out.println("Failed to sleep for 1200 ms");
+              }
+      
+              rejectedRequests = countRejectedRequests(postRequest, getRequest);
+              if (rejectedRequests != 3) {
+                  return CheckResult.wrong(
+                          "Too few rejected requests for a basic application within 1 second.\n" +
+                                  "Expected 3 responses with the status code 429 but received only %d such responses"
+                                          .formatted(rejectedRequests)
+                  );
+              }
+      
+              return CheckResult.correct();
+          }
+      
+          private void checkStatusCode(HttpResponse response, int expected) {
+              var actual = response.getStatusCode();
+              var method = response.getRequest().getMethod();
+              var endpoint = response.getRequest().getEndpoint();
+              if (actual != expected) {
+                  throw new WrongAnswer("""
+                          %s %s should respond with status code %d, responded with %d
+                          \r
+                          """.formatted(method, endpoint, expected, actual));
+              }
+          }
+      
+          private void checkDataJson(HttpResponse response, DataRecord[] expectedData) {
+              expect(response.getContent()).asJson().check(
+                      isArray(expectedData.length)
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[3].getUsername())
+                                      .value("activity", expectedData[3].getActivity())
+                                      .value("duration", expectedData[3].getDuration())
+                                      .value("calories", expectedData[3].getCalories())
+                                      .value("application", expectedData[3].getApplication())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[2].getUsername())
+                                      .value("activity", expectedData[2].getActivity())
+                                      .value("duration", expectedData[2].getDuration())
+                                      .value("calories", expectedData[2].getCalories())
+                                      .value("application", expectedData[2].getApplication())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[1].getUsername())
+                                      .value("activity", expectedData[1].getActivity())
+                                      .value("duration", expectedData[1].getDuration())
+                                      .value("calories", expectedData[1].getCalories())
+                                      .value("application", expectedData[1].getApplication())
+                              )
+                              .item(isObject()
+                                      .value("id", any())
+                                      .value("username", expectedData[0].getUsername())
+                                      .value("activity", expectedData[0].getActivity())
+                                      .value("duration", expectedData[0].getDuration())
+                                      .value("calories", expectedData[0].getCalories())
+                                      .value("application", expectedData[0].getApplication())
+                              )
+              );
+          }
+      
+          private void checkProfileJson(HttpResponse response, DevProfile expectedData) {
+              var applications = expectedData.getApplications();
+      
+              expect(response.getContent()).asJson().check(
+                      isObject()
+                              .value("id", any())
+                              .value("email", Pattern.compile(expectedData.getEmail(), Pattern.CASE_INSENSITIVE))
+                              .value("applications", isArray(expectedData.getApplications().size())
+                                      .item(isObject()
+                                              .value("id", any())
+                                              .value("name", applications.get(1).getName())
+                                              .value("description", applications.get(1).getDescription())
+                                              .value("apikey", applications.get(1).getApikey())
+                                              .value("category", applications.get(1).getCategory())
+                                      )
+                                      .item(isObject()
+                                              .value("id", any())
+                                              .value("name", applications.get(0).getName())
+                                              .value("description", applications.get(0).getDescription())
+                                              .value("apikey", applications.get(0).getApikey())
+                                              .value("category", applications.get(0).getCategory())
+                                      )
+                              )
+              );
+          }
+      
+          private void checkAppRegistrationResponseJson(HttpResponse response, AppProfile expectedData) {
+              expect(response.getContent()).asJson().check(
+                      isObject()
+                              .value("name", expectedData.getName())
+                              .value("apikey", isString())
+                              .value("category", expectedData.getCategory())
+              );
+          }
+      
+          CheckResult reloadServer() {
+              try {
+                  reloadSpring();
+              } catch (Exception ex) {
+                  throw new WrongAnswer("Failed to restart application: " + ex.getMessage());
+              }
+              return CheckResult.correct();
+          }
+      
+          private int countRejectedRequests(HttpRequest... requests) {
+              assert requests.length >= 2;
+      
+              int rejectedRequests = 0;
+              var statusCode = requests[0].send().getStatusCode();
+              if (statusCode == 429) {
+                  rejectedRequests++;
+              }
+              for (int i = 0; i < 3; i++) {
+                  statusCode = requests[1].send().getStatusCode();
+                  if (statusCode == 429) {
+                      rejectedRequests++;
+                  }
+              }
+      
+              // retry in case bucket was replenished during the test
+              if (rejectedRequests < 3) {
+                  rejectedRequests = 0;
+                  for (int i = 0; i < 3; i++) {
+                      statusCode = requests[1].send().getStatusCode();
+                      if (statusCode == 429) {
+                          rejectedRequests++;
+                      }
+                  }
+              }
+      
+              return rejectedRequests;
+          }
+      
+          @DynamicTest
+          DynamicTesting[] dt = new DynamicTesting[]{
+                  () -> testRegisterValidDev(alice),
+                  () -> testRegisterValidDev(bob),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail(null)),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail("")),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadEmail("email")),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadPassword(null)),
+                  () -> testRegisterInvalidDev(DevProfileMother.withBadPassword("")),
+                  () -> testRegisterInvalidDev(aliceCopy),
+                  () -> testRegisterApp(alice, demo1),
+                  () -> testRegisterApp(alice, demo2),
+                  () -> testRegisterApp(bob, basicApp),
+                  () -> testRegisterInvalidApp(alice, demo1Copy),
+                  () -> testRegisterInvalidApp(alice, AppProfileMother.withBadName(null)),
+                  () -> testRegisterInvalidApp(alice, AppProfileMother.withBadName(" ")),
+                  () -> testRegisterInvalidApp(alice, AppProfileMother.withBadDescription(null)),
+                  () -> testGetProfile(alice, bob),
+                  () -> testPostTracker(records, rnd.nextBoolean() ? demo1 : demo2),
+                  () -> testPostTrackerUnauthenticated(DataRecordMother.createRecord(),
+                          AppProfileMother.withBadApiKey(null)),
+                  () -> testPostTrackerUnauthenticated(DataRecordMother.createRecord(),
+                          AppProfileMother.withBadApiKey(UUID.randomUUID().toString())),
+                  () -> testGetTracker(records, rnd.nextBoolean() ? demo1 : demo2),
+                  () -> testGetTrackerUnauthenticated(AppProfileMother.withBadApiKey(null)),
+                  () -> testGetTrackerUnauthenticated(AppProfileMother.withBadApiKey(UUID.randomUUID().toString())),
+                  this::reloadServer,
+                  () -> testGetTracker(records, rnd.nextBoolean() ? demo1 : demo2),
+                  () -> testRateLimit(DataRecordMother.createRecord(), basicApp),
+          };
+      }
+    learner_created: false
+  - name: src/fitnesstracker/configs/CustomErrorMessage.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      public class CustomErrorMessage {
+          private int statusCode;
+      }
+    learner_created: true
+  - name: src/fitnesstracker/configs/ApiKeyAuthenticationProvider.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      import fitnesstracker.applications.ApplicationRepository;
+      import org.springframework.security.authentication.AuthenticationProvider;
+      import org.springframework.security.authentication.BadCredentialsException;
+      import org.springframework.security.core.Authentication;
+      import org.springframework.security.core.AuthenticationException;
+      
+      public class ApiKeyAuthenticationProvider implements AuthenticationProvider {
+          private final ApplicationRepository repository;
+      
+          public ApiKeyAuthenticationProvider(ApplicationRepository repository) {
+              this.repository = repository;
+          }
+      
+          @Override
+          public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+              String apiKey = authentication.getCredentials().toString();
+      
+              var application = repository
+                      .findByApikey(apiKey)
+                      .orElseThrow(() -> new BadCredentialsException("Unknown api key"));
+      
+              var apiKeyAuthentication = new ApiKeyAuthentication(application, apiKey);
+              apiKeyAuthentication.setAuthenticated(true);
+              return apiKeyAuthentication;
+          }
+      
+          @Override
+          public boolean supports(Class<?> authentication) {
+              return ApiKeyAuthentication.class.equals(authentication);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperService.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import fitnesstracker.applications.ApplicationResponse;
+      import fitnesstracker.applications.Application;
+      import fitnesstracker.configs.FitnessTrackerApiException;
+      import org.springframework.dao.DataIntegrityViolationException;
+      import org.springframework.security.crypto.password.PasswordEncoder;
+      import org.springframework.stereotype.Service;
+      import org.springframework.transaction.annotation.Transactional;
+      
+      import java.util.Comparator;
+      import java.util.HashSet;
+      import java.util.Locale;
+      
+      @Service
+      public class DeveloperService {
+          private final DeveloperRepository repository;
+          private final PasswordEncoder passwordEncoder;
+      
+          public DeveloperService(DeveloperRepository repository, PasswordEncoder passwordEncoder) {
+              this.repository = repository;
+              this.passwordEncoder = passwordEncoder;
+          }
+      
+          public Long signupDeveloper(DeveloperSignupDTO signupDTO) {
+              try {
+                  Developer developer = new Developer();
+                  developer.setEmail(signupDTO.email().toLowerCase(Locale.ROOT));
+                  developer.setPassword(passwordEncoder.encode(signupDTO.password()));
+                  developer.setApplications(new HashSet<>(0));
+      
+                  return repository.save(developer).getId();
+              } catch (DataIntegrityViolationException e) {
+                  throw new FitnessTrackerApiException("Email already taken");
+              }
+          }
+      
+          public DeveloperInfoResponse getDeveloperInfo(long id) {
+              Developer developer = repository.findById(id)
+                      .orElseThrow(() -> new FitnessTrackerApiException("Profile not found"));
+      
+              return new DeveloperInfoResponse(
+                      developer.getId(),
+                      developer.getEmail(),
+                      developer.getApplications().stream()
+                              .sorted(Comparator.comparing(Application::getTimestamp).reversed())
+                              .map(app -> new ApplicationResponse(
+                                      String.valueOf(app.getId()),
+                                      app.getName(),
+                                      app.getDescription(),
+                                      app.getApikey()
+                              )).toList()
+              );
+          }
+      
+          @Transactional
+          public void updateDeveloper(Developer developer) {
+              repository.save(developer);
+          }
+      
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationService.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      import java.util.Random;
+      import fitnesstracker.configs.FitnessTrackerApiException;
+      import fitnesstracker.developers.Developer;
+      import fitnesstracker.developers.DeveloperService;
+      import jakarta.transaction.Transactional;
+      import org.springframework.stereotype.Service;
+      
+      @Service
+      public class ApplicationService {
+      
+          private final DeveloperService developerService;
+      
+          public ApplicationService(DeveloperService developerService) {
+              this.developerService = developerService;
+          }
+      
+          @Transactional
+          public ApplicationInfoResponse registerApplication(ApplicationRegisterDTO appDto, Developer developer) {
+              boolean isNameExist = developer.getApplications().stream()
+                      .map(Application::getName)
+                      .anyMatch(appName -> appName.equals(appDto.name()));
+              if (isNameExist) {
+                  throw new FitnessTrackerApiException("Application with this name already exists");
+              }
+      
+              String apiKey = generateRandomString(15);
+              Application app = new Application();
+      
+              app.setName(appDto.name());
+              app.setDescription(appDto.description());
+              app.setApikey(apiKey);
+              app.setDeveloper(developer);
+      
+              developer.getApplications().add(app);
+              developerService.updateDeveloper(developer);
+      
+              return new ApplicationInfoResponse(app.getName(), app.getApikey());
+          }
+      
+          @Transactional
+          public ApplicationInfoResponse regenerateApiKey(long id, Developer developer) {
+              var application = developer.getApplications().stream()
+                      .filter(app -> app.getId() == id)
+                      .findFirst()
+                      .orElseThrow(() -> new FitnessTrackerApiException("Application not found"));
+      
+              developer.getApplications().remove(application);
+              String apikey = generateRandomString(15);
+              application.setApikey(apikey);
+              developer.getApplications().add(application);
+              developerService.updateDeveloper(developer);
+      
+              return new ApplicationInfoResponse(application.getName(), apikey);
+          }
+      
+      
+          public String generateRandomString(int length) {
+              Random random = new Random();
+              StringBuilder sb = new StringBuilder(length);
+      
+              for (int i = 0; i < length; i++) {
+                  // Generate a random ASCII character between 33 ('!') and 126 ('~')
+                  int randomChar = 33 + random.nextInt(94);
+                  sb.append((char) randomChar);
+              }
+      
+              return sb.toString();
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationRepository.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      
+      import org.springframework.data.repository.CrudRepository;
+      
+      import java.util.Optional;
+      
+      public interface ApplicationRepository extends CrudRepository<Application, Long> {
+          Optional<Application> findByApikey(String apiKey);
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/Application.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      import fitnesstracker.developers.Developer;
+      import jakarta.persistence.*;
+      import org.hibernate.annotations.CreationTimestamp;
+      
+      import java.util.Date;
+      
+      @Entity
+      public class Application {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private long id;
+      
+          @Column(nullable = false, unique = true)
+          private String name;
+      
+          @Column(nullable = false)
+          private String description;
+      
+          @Column(nullable = false, unique = true)
+          private String apikey;
+      
+          @ManyToOne(fetch = FetchType.EAGER)
+          @JoinColumn(name = "developer_id")
+          private Developer developer;
+      
+          @CreationTimestamp
+          private Date timestamp;
+      
+          public Application() {
+          }
+      
+          public long getId() {
+              return id;
+          }
+      
+          public void setId(long id) {
+              this.id = id;
+          }
+      
+          public String getName() {
+              return name;
+          }
+      
+          public void setName(String name) {
+              this.name = name;
+          }
+      
+          public String getDescription() {
+              return description;
+          }
+      
+          public void setDescription(String description) {
+              this.description = description;
+          }
+      
+          public String getApikey() {
+              return apikey;
+          }
+      
+          public void setApikey(String apikey) {
+              this.apikey = apikey;
+          }
+      
+          public Developer getDeveloper() {
+              return developer;
+          }
+      
+          public void setDeveloper(Developer developer) {
+              this.developer = developer;
+          }
+      
+          public Date getTimestamp() {
+              return timestamp;
+          }
+      
+          public void setTimestamp(Date timestamp) {
+              this.timestamp = timestamp;
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperAdapter.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import org.springframework.security.core.GrantedAuthority;
+      import org.springframework.security.core.userdetails.UserDetails;
+      
+      import java.util.Collection;
+      
+      public class DeveloperAdapter implements UserDetails {
+          private final Developer developer;
+      
+          public DeveloperAdapter(Developer developer) {
+              this.developer = developer;
+          }
+      
+          public Developer getDeveloper() {
+              return developer;
+          }
+      
+          @Override
+          public Collection<? extends GrantedAuthority> getAuthorities() {
+              return null;
+          }
+      
+          @Override
+          public String getPassword() {
+              return developer.getPassword();
+          }
+      
+          @Override
+          public String getUsername() {
+              return developer.getEmail();
+          }
+      
+          @Override
+          public boolean isAccountNonExpired() {
+              return true;
+          }
+      
+          @Override
+          public boolean isAccountNonLocked() {
+              return true;
+          }
+      
+          @Override
+          public boolean isCredentialsNonExpired() {
+              return true;
+          }
+      
+          @Override
+          public boolean isEnabled() {
+              return true;
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/configs/SecurityConfig.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      import org.springframework.context.annotation.Bean;
+      import org.springframework.context.annotation.Configuration;
+      import org.springframework.http.HttpMethod;
+      import org.springframework.security.config.Customizer;
+      import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+      import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+      import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+      import org.springframework.security.config.http.SessionCreationPolicy;
+      import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+      import org.springframework.security.crypto.password.PasswordEncoder;
+      import org.springframework.security.web.SecurityFilterChain;
+      
+      @Configuration
+      @EnableMethodSecurity
+      public class SecurityConfig {
+      
+          private final MyConfigurer configurer;
+      
+          public SecurityConfig(MyConfigurer configurer) {
+              this.configurer = configurer;
+          }
+      
+          @Bean
+          public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+              http.apply(configurer);
+              return http
+                  .httpBasic(Customizer.withDefaults())
+                  .authorizeHttpRequests(auth -> auth
+                          .requestMatchers(HttpMethod.POST, "/api/developers/signup").permitAll()
+                          .requestMatchers("/error", "/actuator/shutdown", "/api/tracker").permitAll()
+                          .anyRequest().authenticated()
+                  )
+                  .csrf(AbstractHttpConfigurer::disable)
+                  .headers(headers -> headers.frameOptions().disable()) // For the H2 console
+                  .sessionManagement(sessions -> sessions
+                          .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // no session
+                  )
+                  .build();
+          }
+      
+          @Bean
+          public PasswordEncoder passwordEncoder() {
+              return new BCryptPasswordEncoder();
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/configs/ApiKeyAuthentication.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      import fitnesstracker.applications.Application;
+      import org.springframework.security.core.Authentication;
+      import org.springframework.security.core.GrantedAuthority;
+      
+      import java.util.Collection;
+      import java.util.List;
+      
+      public class ApiKeyAuthentication implements Authentication {
+          private final Application application;
+          private final String apiKey;
+          private boolean authenticated;
+      
+          public ApiKeyAuthentication(Application application, String apiKey) {
+              this.application = application;
+              this.apiKey = apiKey;
+              this.authenticated = false;
+          }
+      
+          @Override
+          public Collection<? extends GrantedAuthority> getAuthorities() {
+              return List.of(() -> "application");
+          }
+      
+          @Override
+          public Object getCredentials() {
+              return apiKey;
+          }
+      
+          @Override
+          public Object getDetails() {
+              return null;
+          }
+      
+          @Override
+          public Object getPrincipal() {
+              return application;
+          }
+      
+          @Override
+          public boolean isAuthenticated() {
+              return authenticated;
+          }
+      
+          @Override
+          public void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
+              authenticated = isAuthenticated;
+          }
+      
+          @Override
+          public String getName() {
+              return application.getName();
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/Developer.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import fitnesstracker.applications.Application;
+      import jakarta.persistence.*;
+      
+      import java.util.Set;
+      
+      @Entity
+      public class Developer {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private long id;
+      
+          @Column(unique = true, nullable = false)
+          private String email;
+      
+          @Column(nullable = false)
+          private String password;
+      
+          @OneToMany(mappedBy = "developer", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+          private Set<Application> applications;
+      
+          public Developer() {
+          }
+      
+          public long getId() {
+              return id;
+          }
+      
+          public void setId(long id) {
+              this.id = id;
+          }
+      
+          public String getEmail() {
+              return email;
+          }
+      
+          public void setEmail(String email) {
+              this.email = email;
+          }
+      
+          public String getPassword() {
+              return password;
+          }
+      
+          public void setPassword(String password) {
+              this.password = password;
+          }
+      
+          public Set<Application> getApplications() {
+              return applications;
+          }
+      
+          public void setApplications(Set<Application> applications) {
+              this.applications = applications;
+          }
+      
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperController.java
+    visible: true
+    text: |+
+      package fitnesstracker.developers;
+      
+      import jakarta.validation.Valid;
+      import org.springframework.beans.factory.annotation.Autowired;
+      import org.springframework.http.ResponseEntity;
+      import org.springframework.security.access.prepost.PreAuthorize;
+      import org.springframework.security.core.annotation.AuthenticationPrincipal;
+      import org.springframework.web.bind.annotation.*;
+      
+      import java.net.URI;
+      
+      @RestController
+      public class DeveloperController {
+          private final DeveloperService service;
+      
+          @Autowired
+          public DeveloperController(DeveloperService service) {
+              this.service = service;
+          }
+      
+          @PostMapping(path = "/api/developers/signup")
+          public ResponseEntity<Void> signup(@Valid @RequestBody DeveloperSignupDTO signupDTO) {
+              Long id = service.signupDeveloper(signupDTO);
+              return ResponseEntity
+                      .created(URI.create("/api/developers/" + id))
+                      .build();
+          }
+      
+          @GetMapping(path = "/api/developers/{id}")
+          @PreAuthorize("#user.developer.id == #id")
+          public ResponseEntity<DeveloperInfoResponse> getDeveloperInfoResponse(@PathVariable Long id, @AuthenticationPrincipal DeveloperAdapter user) {
+              DeveloperInfoResponse developerInfo = service.getDeveloperInfo(id);
+              return ResponseEntity.ok(developerInfo);
+          }
+      }
+    
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperUserDetailsServiceImpl.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import org.springframework.security.core.userdetails.UserDetails;
+      import org.springframework.security.core.userdetails.UserDetailsService;
+      import org.springframework.security.core.userdetails.UsernameNotFoundException;
+      import org.springframework.stereotype.Service;
+      
+      import java.util.Locale;
+      
+      @Service
+      public class DeveloperUserDetailsServiceImpl implements UserDetailsService {
+          private final DeveloperRepository repository;
+      
+          public DeveloperUserDetailsServiceImpl(DeveloperRepository repository) {
+              this.repository = repository;
+          }
+      
+          @Override
+          public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+              Developer developer = repository
+                      .findByEmail(username.toLowerCase(Locale.ROOT))
+                      .orElseThrow(() -> new UsernameNotFoundException("Username '" + username + "' not found"));
+              return new DeveloperAdapter(developer);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/tracker/FitnessTrackerRepository.java
+    visible: true
+    text: |
+      package fitnesstracker.tracker;
+      
+      import org.springframework.data.repository.CrudRepository;
+      import org.springframework.data.repository.PagingAndSortingRepository;
+      
+      public interface FitnessTrackerRepository extends PagingAndSortingRepository<FitnessTrackerEntity, Long>,
+              CrudRepository<FitnessTrackerEntity, Long> {
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationResponse.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      public record ApplicationResponse(
+              String id,
+              String name,
+              String description,
+              String apikey
+      ){}
+    learner_created: true
+  - name: src/fitnesstracker/configs/FitnessTrackerApiException.java
+    visible: true
+    text: |+
+      package fitnesstracker.configs;
+      
+      import org.springframework.http.HttpStatus;
+      import org.springframework.web.bind.annotation.ResponseStatus;
+      
+      @ResponseStatus(HttpStatus.BAD_REQUEST)
+      public class FitnessTrackerApiException extends RuntimeException {
+          public FitnessTrackerApiException(String message) {
+              super(message);
+          }
+      }
+    
+    learner_created: true
+  - name: src/fitnesstracker/tracker/FitnessTrackerSortedResponse.java
+    visible: true
+    text: |
+      package fitnesstracker.tracker;
+      
+      public class FitnessTrackerSortedResponse {
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationController.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      import fitnesstracker.developers.DeveloperAdapter;
+      import jakarta.validation.Valid;
+      import org.springframework.http.HttpStatus;
+      import org.springframework.http.ResponseEntity;
+      import org.springframework.security.access.prepost.PreAuthorize;
+      import org.springframework.security.core.annotation.AuthenticationPrincipal;
+      import org.springframework.web.bind.annotation.PathVariable;
+      import org.springframework.web.bind.annotation.PostMapping;
+      import org.springframework.web.bind.annotation.RequestBody;
+      import org.springframework.web.bind.annotation.RestController;
+      
+      @RestController
+      public class ApplicationController {
+      
+          private final ApplicationService appService;
+      
+          public ApplicationController(ApplicationService appService) {
+              this.appService = appService;
+          }
+      
+          @PostMapping(path = "/api/applications/register")
+          public ResponseEntity<ApplicationInfoResponse> registerApplication(@Valid @RequestBody ApplicationRegisterDTO appDto, @AuthenticationPrincipal DeveloperAdapter adapter) {
+              ApplicationInfoResponse appInfo = appService.registerApplication(appDto, adapter.getDeveloper());
+              return ResponseEntity.status(HttpStatus.CREATED).body(appInfo);
+          }
+      
+          @PostMapping(path = "/api/applications/{id}/apikey")
+          @PreAuthorize("@dm.decide(#user, #id)")
+          public ResponseEntity<ApplicationInfoResponse> recreateApiKey(@PathVariable Long id,
+                                                          @AuthenticationPrincipal DeveloperAdapter adapter) {
+              ApplicationInfoResponse appInfo = appService.regenerateApiKey(id, adapter.getDeveloper());
+              return ResponseEntity.ok(appInfo);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationRegisterDTO.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      import jakarta.validation.constraints.Email;
+      import jakarta.validation.constraints.NotBlank;
+      import jakarta.validation.constraints.NotNull;
+      
+      public record ApplicationRegisterDTO(
+              @NotBlank(message = "Application name cannot be empty")
+              String name,
+      
+              @NotNull
+              String description
+      ) { }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperRepository.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import org.springframework.data.repository.CrudRepository;
+      
+      import java.util.Optional;
+      
+      public interface DeveloperRepository extends CrudRepository<Developer, Long> {
+          Optional<Developer> findByEmail(String email);
+      }
+    learner_created: true
+  - name: src/fitnesstracker/tracker/FitnessTrackerController.java
+    visible: true
+    text: |
+      package fitnesstracker.tracker;
+      
+      import fitnesstracker.applications.Application;
+      import fitnesstracker.tracker.FitnessTrackerEntity;
+      import fitnesstracker.tracker.FitnessTrackerRepository;
+      import org.springframework.beans.factory.annotation.Autowired;
+      import org.springframework.data.domain.Sort;
+      import org.springframework.http.ResponseEntity;
+      import org.springframework.security.core.annotation.AuthenticationPrincipal;
+      import org.springframework.web.bind.annotation.GetMapping;
+      import org.springframework.web.bind.annotation.PostMapping;
+      import org.springframework.web.bind.annotation.RequestBody;
+      import org.springframework.web.bind.annotation.RestController;
+      
+      import java.net.URI;
+      
+      @RestController
+      public class FitnessTrackerController {
+          private final FitnessTrackerRepository repository;
+      
+          @Autowired
+          public FitnessTrackerController(FitnessTrackerRepository repository) {
+              this.repository = repository;
+          }
+      
+          @PostMapping(path = "/api/tracker")
+          public ResponseEntity<Void> createFitnessTracker(@RequestBody FitnessTrackerEntity fitnessTracker,
+                                                           @AuthenticationPrincipal Application application) {
+              fitnessTracker.setApplication(application.getName());
+              FitnessTrackerEntity savedFitnessTracker = repository.save(fitnessTracker);
+              URI location = URI.create(String.format("/api/tracker/%s", savedFitnessTracker.getId()));
+              return ResponseEntity.created(location).build();
+          }
+      
+          @GetMapping(path = "/api/tracker")
+          public ResponseEntity<Iterable<FitnessTrackerEntity>> getFitnessTrackerList() {
+              Sort sortByIdDesc = Sort.by("id").descending();
+              Iterable<FitnessTrackerEntity> fitnessTrackerEntityList = repository.findAll(sortByIdDesc);
+              return ResponseEntity.ok(fitnessTrackerEntityList);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/configs/ApiKeyAuthenticationFilter.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      import jakarta.servlet.FilterChain;
+      import jakarta.servlet.ServletException;
+      import jakarta.servlet.http.HttpServletRequest;
+      import jakarta.servlet.http.HttpServletResponse;
+      import org.slf4j.Logger;
+      import org.slf4j.LoggerFactory;
+      import org.springframework.security.authentication.AuthenticationManager;
+      import org.springframework.security.authentication.BadCredentialsException;
+      import org.springframework.security.core.Authentication;
+      import org.springframework.security.core.AuthenticationException;
+      import org.springframework.security.core.context.SecurityContextHolder;
+      import org.springframework.security.web.AuthenticationEntryPoint;
+      import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+      import org.springframework.security.web.util.matcher.RequestMatcher;
+      import org.springframework.web.filter.OncePerRequestFilter;
+      
+      import java.io.IOException;
+      
+      public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
+          private static final Logger log = LoggerFactory.getLogger(ApiKeyAuthenticationFilter.class);
+          private final RequestMatcher matcher = new AntPathRequestMatcher("/api/tracker");
+          private final AuthenticationEntryPoint authenticationEntryPoint = (request, response, ex) -> {
+              response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+              response.getWriter().write(ex.getMessage());
+          };
+          private final AuthenticationManager manager;
+      
+          public ApiKeyAuthenticationFilter(AuthenticationManager manager) {
+              this.manager = manager;
+          }
+      
+          @Override
+          protected void doFilterInternal(HttpServletRequest request,
+                                          HttpServletResponse response,
+                                          FilterChain filterChain) throws ServletException, IOException {
+              if (matcher.matches(request)) {
+                  var apiKey = request.getHeader("X-API-Key");
+                  log.info("Got api key: {}", apiKey);
+                  try {
+                      if (apiKey != null) {
+                          Authentication authentication = new ApiKeyAuthentication(null, apiKey);
+                          authentication = manager.authenticate(authentication);
+                          SecurityContextHolder.getContext().setAuthentication(authentication);
+                          filterChain.doFilter(request, response);
+                          return;
+                      }
+                      throw new BadCredentialsException("No api key");
+                  } catch (AuthenticationException e) {
+                      authenticationEntryPoint.commence(request, response, e);
+                      return;
+                  }
+              }
+      
+              filterChain.doFilter(request, response);
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/configs/MyConfigurer.java
+    visible: true
+    text: |
+      package fitnesstracker.configs;
+      
+      import fitnesstracker.applications.ApplicationRepository;
+      import org.springframework.security.authentication.AuthenticationManager;
+      import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+      import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+      import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+      import org.springframework.stereotype.Component;
+      
+      @Component
+      public class MyConfigurer extends AbstractHttpConfigurer<MyConfigurer, HttpSecurity> {
+          private final ApplicationRepository repository;
+      
+          public MyConfigurer(ApplicationRepository repository) {
+              this.repository = repository;
+          }
+      
+          @Override
+          public void configure(HttpSecurity builder) {
+              AuthenticationManager manager = builder.getSharedObject(AuthenticationManager.class);
+              builder
+                      .addFilterAfter(
+                              new ApiKeyAuthenticationFilter(manager),
+                              UsernamePasswordAuthenticationFilter.class
+                      )
+                      .authenticationProvider(new ApiKeyAuthenticationProvider(repository));
+          }
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperSignupDTO.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import jakarta.validation.constraints.Email;
+      import jakarta.validation.constraints.NotBlank;
+      
+      public record DeveloperSignupDTO(
+              @Email(message = "Invalid email format")
+              @NotBlank(message = "Email cannot be empty")
+              String email,
+      
+              @NotBlank(message = "Password cannot be blank")
+              String password
+      ) {
+      
+      }
+    learner_created: true
+  - name: src/fitnesstracker/developers/DeveloperInfoResponse.java
+    visible: true
+    text: |
+      package fitnesstracker.developers;
+      
+      import fitnesstracker.applications.ApplicationResponse;
+      
+      import java.util.List;
+      
+      public record DeveloperInfoResponse(Long id, String email, List<ApplicationResponse> applications) { }
+    learner_created: true
+  - name: src/fitnesstracker/applications/ApplicationInfoResponse.java
+    visible: true
+    text: |
+      package fitnesstracker.applications;
+      
+      import jakarta.persistence.Column;
+      
+      public record ApplicationInfoResponse(String name, String apikey) {}
+    learner_created: true
+  - name: src/fitnesstracker/tracker/FitnessTrackerEntity.java
+    visible: true
+    text: |
+      package fitnesstracker.tracker;
+      
+      import jakarta.persistence.*;
+      
+      @Entity
+      @Table(name = "fitness_tracker")
+      public class FitnessTrackerEntity {
+          @Id
+          @GeneratedValue(strategy = GenerationType.IDENTITY)
+          private long id;
+      
+          private String username;
+          private String activity;
+          private int duration;
+          private int calories;
+          private String application;
+      
+          public FitnessTrackerEntity() {
+          }
+      
+          public FitnessTrackerEntity(long id, String username, String activity, int duration, int calories, String application) {
+              this.id = id;
+              this.username = username;
+              this.activity = activity;
+              this.duration = duration;
+              this.calories = calories;
+              this.application = application;
+          }
+      
+          public String getUsername() {
+              return username;
+          }
+      
+          public void setUsername(String username) {
+              this.username = username;
+          }
+      
+          public String getActivity() {
+              return activity;
+          }
+      
+          public void setActivity(String activity) {
+              this.activity = activity;
+          }
+      
+          public int getDuration() {
+              return duration;
+          }
+      
+          public void setDuration(int duration) {
+              this.duration = duration;
+          }
+      
+          public int getCalories() {
+              return calories;
+          }
+      
+          public void setCalories(int calories) {
+              this.calories = calories;
+          }
+      
+          public long getId() {
+              return id;
+          }
+      
+          public String getApplication() {
+              return application;
+          }
+      
+          public void setApplication(String application) {
+              this.application = application;
+          }
+      }
+    learner_created: true
+feedback_link: https://hyperskill.org/projects/408/stages/2394/implement#comment
+status: Failed
+feedback:
+  message: |-
+    Wrong answer in test #9
+
+    The JSON object should contain a key &quot;category&quot;
+
+    Full JSON:
+    {
+      &quot;name&quot;: &quot;Demo App 1&quot;,
+      &quot;apikey&quot;: &quot;i`36gY@+PkuI{gD&quot;
+    }
+  time: "Mon, 12 Feb 2024 04:44:50 UTC"
+record: -1
